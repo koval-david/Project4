@@ -10,7 +10,7 @@
 #include "lcd4bit_lib.h"
 
 // #defines for handy constants
-
+#define fan LATAbits.LATA4
 /*********** GLOBAL VARIABLE AND FUNCTION DEFINITIONS *******/
 float Temperature;  // Temperature input from sensor
 float Humidity;     // Humidity input from sensor
@@ -38,13 +38,13 @@ int main ( void )  //main function that....
 { 
 /* Define local variables */
 
-
 /* Call configuration routines */
 	configClock();      //Sets the clock to 40MHz using FRC and PLL
   	configHeartbeat();  //Blinks the LED on RA1
     configControlLCD(); //configures RS, RW, and E control lines as outputs and initializes them low.
     initLCD();          //executes the initialization sequence specified in teh Hitachi HD44780 LCD controller datasheet,
-                        //clears the screen and sets the cursor position to upper left (home).
+    _TRISA4 = 0;                    //clears the screen and sets the cursor position to upper left (home).
+    
 
     
 /* Initialize ports and other one-time code */
