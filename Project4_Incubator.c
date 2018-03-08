@@ -11,6 +11,8 @@
 
 // #defines for handy constants
 #define fan LATAbits.LATA4 // RA4 is taking control over the fan
+#define ledRed LATAbits.LATA2   //RA2 controls redled
+#define ledGreen LATAbits.LATA3 //RA3 controls greenled
 /*********** GLOBAL VARIABLE AND FUNCTION DEFINITIONS *******/
 float Temperature;  // Temperature input from sensor
 float Humidity;     // Humidity input from sensor
@@ -44,19 +46,22 @@ int main ( void )  //main function that....
     configControlLCD(); //configures RS, RW, and E control lines as outputs and initializes them low.
     initLCD();          //executes the initialization sequence specified in teh Hitachi HD44780 LCD controller datasheet,
     _TRISA4 = 0;                    //clears the screen and sets the cursor position to upper left (home).
-    
+    _TRISA2 = 0;                    // Redled 
+    _TRISA3 = 0;
 
     
 /* Initialize ports and other one-time code */
     Temperature = 98.6;
     Humidity = 60.1;
+    displayStats(Temperature, Humidity);
     
 /* Main program loop */
 	while (1) {	
         doHeartbeat();
         
         writeLCD(0b00011100, 0, 1, 1);
-        displayStats(Temperature, Humidity);
+        ledRed = ~ledRed;
+        ledGreen = ~ledGreen;
         
         DELAY_MS(600);
 		}
