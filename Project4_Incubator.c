@@ -10,7 +10,7 @@
 #include "lcd4bit_lib.h"
 
 // #defines for handy constants
-#define fan LATAbits.LATA4
+#define fan LATAbits.LATA4 // RA4 is taking control over the fan
 /*********** GLOBAL VARIABLE AND FUNCTION DEFINITIONS *******/
 float Temperature;  // Temperature input from sensor
 float Humidity;     // Humidity input from sensor
