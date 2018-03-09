@@ -13,8 +13,6 @@
 #define PWM_PERIOD 3125         //20ms PWM period with clock cycle of 6.4us from 1:256 prescale
 #define LIGHT_MIN 203           //1.3ms (min) pulse width for Lamp servo
 #define EGG_ROLLER_MIN 117      //0.75ms (min) pulse width for Egg Roller servo
-#define STOP 234
-#define One_Rotation 200        //200ms delay for one rotation
 
 #define ledRed LATAbits.LATA2   //RA2 controls red led
 #define ledGreen LATAbits.LATA3 //RA3 controls green led
@@ -24,16 +22,24 @@
 #define temp_size 3
 #define hum_size 3
 
+#define One_Rotation 200        //Time to turn on Lamp
+#define MAX_TEMP 56             //Max Optimal Temperature
+#define MIN_TEMP 55             //Min Optimal Temperature
+#define MAX_HUMD 44             //Max Optimal Humidity
+#define MIN_HUMD 43             //Min Optimal Humidity
+#define ROTATE_EGGS 300         //When to rotate Eggs
+
 /*********** GLOBAL VARIABLE AND FUNCTION DEFINITIONS *******/
 float Temperature;              //Temperature input from sensor
 float Humidity;                 //Humidity input from sensor
-char tempINT[];                 //LCD array for temperature
-char humdINT[];                 //LCD array for humidity
-uint8_t temp[temp_size];
-uint8_t hum[hum_size];
+char tempINT[3];                 //LCD array for temperature
+char humdINT[3];                 //LCD array for humidity
+uint8_t temp[temp_size];        //I2C array for temperature
+uint8_t hum[hum_size];          //I2C array for humidity
 uint16_t LIGHT_pulse_width;     //Pulse width for Lamp servo
 uint16_t EGG_ROLLER_pulse_width;//Pulse width for Egg Roller servo
 int Light_ON = 0;               //Status of Lamp
+int Egg_Roller_Counter = 0;     //Time counter for Egg rotation (in seconds)
 
 // Configures Output compare module 1 for continuous Rotation Servo - Light
 void configOC1() {
@@ -65,11 +71,12 @@ void configTimer2() {
 
 //Configures the timer 2 interupt and loads its registers
 void _ISR _T2Interrupt(void) {
-    OC1RS = LIGHT_pulse_width;          //Load OC1RS register with Lamp pulse width
+    OC1RS = LIGHT_pulse_width;          //Load OC1RS register with Light pulse width
     OC2RS = EGG_ROLLER_pulse_width;     //Load OC2RS register with Egg Roller pulse width
     _T2IF = 0;                          //Clears the Timer 2 interrupt flag, the last instruction in ISR
 }
 
+//Reads temperature from sensor
 float getTemp(void) {
     write1I2C1(I2C_ADD, 0xE3);
     readNI2C1(I2C_ADD, temp, temp_size);
@@ -80,6 +87,7 @@ float getTemp(void) {
     return temperature;
 }
 
+//Reads humidity from sensor
 float getHum(void) {
     write1I2C1(I2C_ADD, 0xE5);
     readNI2C1(I2C_ADD, hum, hum_size);
@@ -131,36 +139,54 @@ int main ( void )  //main function that....
     
 /* Initialize ports and other one-time code */
     _T2IE = 1;                      //Enables the timer 2 interrupts
-    T2CONbits.TON = 1;              //Turns timer 2 on
-    Light_ON = 0;
-    LIGHT_pulse_width = 0;          //Light servo
-    EGG_ROLLER_pulse_width = 0;     //Egg Roller servo
+    T2CONbits.TON = 1;              //Turns timer 2 ON
+    Light_ON = 0;                   //Initial Lamp status
+    LIGHT_pulse_width = 0;          //Initial Light servo pulse width
+    EGG_ROLLER_pulse_width = 0;     //Initial Egg Roller servo pulse width
+    Egg_Roller_Counter = 0;         //Initial Egg Roller counter
+    
+    fan = 1;                        //Always Set Fan to high
     
 /* Main program loop */
 	while (1) {
         
-        Temperature = getTemp();
-        Humidity = getHum();
+        Temperature = getTemp();    //Read temperature from sensor
+        Humidity = getHum();        //Read humidity from sensor
+        
         
         //Turns ON/OFF Lamp
-        if(Temperature < 55.0 && Light_ON == 0){
-            LIGHT_pulse_width = LIGHT_MIN;
-            DELAY_MS(One_Rotation);
-            LIGHT_pulse_width = 0;
-            Light_ON = 1;
+        //Turns Lamp ON
+        if(Temperature < MIN_TEMP && Light_ON == 0){
+            LIGHT_pulse_width = LIGHT_MIN;              //Turn Motor
+            DELAY_MS(One_Rotation);                     //Delay for turning
+            LIGHT_pulse_width = 0;                      //Turn motor off
+            Light_ON = 1;                               //Update Light status
         }
-        if(Temperature > 55.1 && Light_ON == 1){
-            LIGHT_pulse_width = LIGHT_MIN;
-            DELAY_MS(One_Rotation);
-            LIGHT_pulse_width = 0;
-            Light_ON = 0;
+        //Turns Lamp OFF
+        if(Temperature > MAX_TEMP && Light_ON == 1){
+            LIGHT_pulse_width = LIGHT_MIN;              //Turn motor
+            DELAY_MS(One_Rotation);                     //Delay for turning
+            LIGHT_pulse_width = 0;                      //Turn motor off
+            Light_ON = 0;                               //Update Light status
+        }
+        
+        //Control Egg Roller
+        //When time period is reached, Egg roller turns
+        if(Egg_Roller_Counter >= ROTATE_EGGS){
+            EGG_ROLLER_pulse_width = EGG_ROLLER_MIN;    //Turn motor
+        }
+        else if (Egg_Roller_Counter == (ROTATE_EGGS+10)){ //Delay for turning
+            EGG_ROLLER_pulse_width = 0;                 //Turn motor off
+            Egg_Roller_Counter = 0;                     //Reset counter
         }
         
         //Controls RED and GREEN LED
-        if (Temperature > 55.0 && Temperature < 55.1 && Humidity > 43.0 && Humidity < 45.0){
+        //Turns ON Green LED if conditions are ideal
+        if (Temperature > MIN_TEMP && Temperature < MAX_TEMP && Humidity > MIN_HUMD && Humidity < MAX_HUMD){
             ledGreen = 1;
             ledRed = 0;
         }
+        //Turns ON Red LED if conditions are not ideal
         else{
             ledGreen = 0;
             ledRed = 1;
@@ -169,7 +195,8 @@ int main ( void )  //main function that....
         //Displays Temperature and Humidity to LCD
         //writeLCD(0b00011100, 0, 1, 1);
         displayStats(Temperature, Humidity);
-        
-        DELAY_MS(600);
+        //Increment Egg Roller Counter
+        Egg_Roller_Counter++;
+        DELAY_MS(10000);
 		}
 }
