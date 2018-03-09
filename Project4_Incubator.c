@@ -198,5 +198,5 @@ int main ( void )  //main function that....
         //Increment Egg Roller Counter
         Egg_Roller_Counter++;
         DELAY_MS(10000);
-		}
+    }
 }
