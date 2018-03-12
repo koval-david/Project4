@@ -46,10 +46,10 @@
 
 #define ON_Rotation 350         //Time (ms) to turn ON Lamp
 #define OFF_Rotation 150        //Time (ms) to turn OFF Lamp
-#define MAX_TEMP 59             //Max Optimal Temperature
-#define MIN_TEMP 58             //Min Optimal Temperature
-#define MAX_HUMD 44             //Max Optimal Humidity
-#define MIN_HUMD 43             //Min Optimal Humidity
+#define MAX_TEMP 99             //Max Optimal Temperature
+#define MIN_TEMP 98             //Min Optimal Temperature
+#define MAX_HUMD 62             //Max Optimal Humidity
+#define MIN_HUMD 58             //Min Optimal Humidity
 #define ROTATE_EGGS 10          //When to rotate Eggs
 #define ROLLER_TIME 10          //Period to roll Eggs
 
@@ -226,7 +226,6 @@ int main ( void )  //main function that....
         }
         
         //Displays Temperature and Humidity to LCD
-        //writeLCD(0b00011100, 0, 1, 1);            //Scrolls display
         displayStats(Temperature, Humidity);
         //Increment Egg Roller Counter
         Egg_Roller_Counter++;
