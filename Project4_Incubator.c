@@ -102,22 +102,22 @@ void _ISR _T2Interrupt(void) {
 
 //Reads temperature from sensor
 float getTemp(void) {
-    write1I2C1(I2C_ADD, 0xE3);
-    readNI2C1(I2C_ADD, temp, temp_size);
+    write1I2C1(I2C_ADD, 0xE3);						//Tell sensor to take temperature reading
+    readNI2C1(I2C_ADD, temp, temp_size);				//Read binary temperature code into array temp
     
-    uint16_t number = (uint16_t)temp[0] << 8 | temp[1];
-    float temperature = ((((175.72*number)/65536)-46.85)*(9/5))+32;
+    uint16_t number = (uint16_t)temp[0] << 8 | temp[1];			//Shift items in array temp into an integer
+    float temperature = ((((175.72*number)/65536)-46.85)*(9/5))+32;	//Convert temperature code to degrees Fahrenheit
     
     return temperature;
 }
 
 //Reads humidity from sensor
 float getHum(void) {
-    write1I2C1(I2C_ADD, 0xE5);
-    readNI2C1(I2C_ADD, hum, hum_size);
+    write1I2C1(I2C_ADD, 0xE5);					//Tell sensor to take humidity reading
+    readNI2C1(I2C_ADD, hum, hum_size);				//Read binary humidity code into array hum
     
-    uint16_t number = (uint16_t)temp[0] << 8 | temp[1];
-    float humidity = ((125.0*number)/65536.0)-6.0;
+    uint16_t number = (uint16_t)temp[0] << 8 | temp[1];		//Shift items in array hum into an integer
+    float humidity = ((125.0*number)/65536.0)-6.0;		//Convert humidity code to percent relative humidity
     
     return humidity;
 }
