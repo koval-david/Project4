@@ -40,9 +40,9 @@
 #define ledGreen LATAbits.LATA3 //RA3 controls Green LED
 #define fan LATAbits.LATA4      //RA4 controls Fan
 
-#define I2C_ADD 0x80            //
-#define temp_size 3             //
-#define hum_size 3              //
+#define I2C_ADD 0x80            //Address of temperature/humidity sensor
+#define temp_size 3             //Byte size of temperature array for reading from sensor
+#define hum_size 3              //Byte size of humidity array for reading from sensor
 
 #define ON_Rotation 350         //Time (ms) to turn ON Lamp
 #define OFF_Rotation 150        //Time (ms) to turn OFF Lamp
