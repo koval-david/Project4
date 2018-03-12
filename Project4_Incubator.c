@@ -106,7 +106,7 @@ float getTemp(void) {
     readNI2C1(I2C_ADD, temp, temp_size);				//Read binary temperature code into array temp
     
     uint16_t number = (uint16_t)temp[0] << 8 | temp[1];			//Shift items in array temp into an integer
-    float temperature = ((((175.72*number)/65536)-46.85)*(9/5))+32;	//Convert temperature code to degrees Fahrenheit
+    float temperature = ((((175.72*number)/65536.0)-46.85)*(9.0/5.0))+32.0;	//Convert temperature code to degrees Fahrenheit
     
     return temperature;
 }
