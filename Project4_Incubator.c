@@ -2,6 +2,28 @@
  * File: ECE_218_Project4_Incubator
  * Author: David Koval, Sirus Negahvan, Vincent Yang
  * Date: Wednesday, 7 March 2018
+ *
+ * This program is built to autonomously run a Poultry Egg Incubator System
+ * using a PIC24HJ128GP502.
+ *
+ * Description:
+ * This program reads in temperature and humidity in via a sensor.
+ * Displays those values to the LCD, and given parameters, it displays the
+ * conditions via LEDs. Controls 2 servo motors, one to rotate the eggs, and another
+ * servo motor to turn ON/OFF a light/heat source.
+ *
+ * Pins Utilized: 4 (RB0), 5 (RB1), 9 (RA2), 10 (RA3), 12 (RA4),
+ * 15 (RB6), 16 (RB7), 17 (SCL1), 18 (SDA1), 21 (RB10), 22 (RB11) 23 (RB12),
+ * 24 (RB13), 25 (RB14).
+ *
+ * Pin assignment:
+ * 4-Servo Motor
+ * 5-Servo Motor
+ * 9-LED
+ * 10-LED
+ * 12-Quadruple Half-H Driver (SN754410NE)
+ * 15,16,21,22,23,24,25-LCD Display
+ * 17,18-Temperature+Humidity Sensor (HTU21D-F)
  */
 /*********** COMPILER DIRECTIVES *********/
 
@@ -11,29 +33,31 @@
 
 // #defines for handy constants
 #define PWM_PERIOD 3125         //20ms PWM period with clock cycle of 6.4us from 1:256 prescale
-#define LIGHT_MIN 203           //1.3ms (min) pulse width for Lamp servo
-#define EGG_ROLLER_MIN 117      //0.75ms (min) pulse width for Egg Roller servo
+#define LIGHT_MIN 250           //Pulse width for Lamp servo
+#define EGG_ROLLER_MIN 117      //Pulse width for Egg Roller servo
 
-#define ledRed LATAbits.LATA2   //RA2 controls red led
-#define ledGreen LATAbits.LATA3 //RA3 controls green led
-#define fan LATAbits.LATA4      //RA4 is controls fan
+#define ledRed LATAbits.LATA2   //RA2 controls Red LED
+#define ledGreen LATAbits.LATA3 //RA3 controls Green LED
+#define fan LATAbits.LATA4      //RA4 controls Fan
 
-#define I2C_ADD 0x80
-#define temp_size 3
-#define hum_size 3
+#define I2C_ADD 0x80            //
+#define temp_size 3             //
+#define hum_size 3              //
 
-#define One_Rotation 200        //Time to turn on Lamp
-#define MAX_TEMP 56             //Max Optimal Temperature
-#define MIN_TEMP 55             //Min Optimal Temperature
+#define ON_Rotation 350         //Time (ms) to turn ON Lamp
+#define OFF_Rotation 150        //Time (ms) to turn OFF Lamp
+#define MAX_TEMP 59             //Max Optimal Temperature
+#define MIN_TEMP 58             //Min Optimal Temperature
 #define MAX_HUMD 44             //Max Optimal Humidity
 #define MIN_HUMD 43             //Min Optimal Humidity
-#define ROTATE_EGGS 300         //When to rotate Eggs
+#define ROTATE_EGGS 10          //When to rotate Eggs
+#define ROLLER_TIME 10          //Period to roll Eggs
 
 /*********** GLOBAL VARIABLE AND FUNCTION DEFINITIONS *******/
 float Temperature;              //Temperature input from sensor
 float Humidity;                 //Humidity input from sensor
-char tempINT[3];                 //LCD array for temperature
-char humdINT[3];                 //LCD array for humidity
+char tempINT[3];                //LCD array for temperature
+char humdINT[3];                //LCD array for humidity
 uint8_t temp[temp_size];        //I2C array for temperature
 uint8_t hum[hum_size];          //I2C array for humidity
 uint16_t LIGHT_pulse_width;     //Pulse width for Lamp servo
@@ -140,12 +164,11 @@ int main ( void )  //main function that....
 /* Initialize ports and other one-time code */
     _T2IE = 1;                      //Enables the timer 2 interrupts
     T2CONbits.TON = 1;              //Turns timer 2 ON
-    Light_ON = 0;                   //Initial Lamp status
+    Light_ON = 0;                   //Initial Lamp status (OFF)
     LIGHT_pulse_width = 0;          //Initial Light servo pulse width
     EGG_ROLLER_pulse_width = 0;     //Initial Egg Roller servo pulse width
     Egg_Roller_Counter = 0;         //Initial Egg Roller counter
-    
-    fan = 1;                        //Always Set Fan to high
+    fan = 0;                        //Initial status of Fan (OFF)
     
 /* Main program loop */
 	while (1) {
@@ -158,24 +181,24 @@ int main ( void )  //main function that....
         //Turns Lamp ON
         if(Temperature < MIN_TEMP && Light_ON == 0){
             LIGHT_pulse_width = LIGHT_MIN;              //Turn Motor
-            DELAY_MS(One_Rotation);                     //Delay for turning
+            DELAY_MS(ON_Rotation);                      //Delay for turning
             LIGHT_pulse_width = 0;                      //Turn motor off
             Light_ON = 1;                               //Update Light status
         }
         //Turns Lamp OFF
         if(Temperature > MAX_TEMP && Light_ON == 1){
             LIGHT_pulse_width = LIGHT_MIN;              //Turn motor
-            DELAY_MS(One_Rotation);                     //Delay for turning
+            DELAY_MS(OFF_Rotation);                     //Delay for turning
             LIGHT_pulse_width = 0;                      //Turn motor off
             Light_ON = 0;                               //Update Light status
         }
         
         //Control Egg Roller
         //When time period is reached, Egg roller turns
-        if(Egg_Roller_Counter >= ROTATE_EGGS){
+        if(Egg_Roller_Counter == ROTATE_EGGS){
             EGG_ROLLER_pulse_width = EGG_ROLLER_MIN;    //Turn motor
         }
-        else if (Egg_Roller_Counter == (ROTATE_EGGS+10)){ //Delay for turning
+        else if (Egg_Roller_Counter >= (ROTATE_EGGS+ROLLER_TIME)){ //Delay for turning
             EGG_ROLLER_pulse_width = 0;                 //Turn motor off
             Egg_Roller_Counter = 0;                     //Reset counter
         }
@@ -192,11 +215,21 @@ int main ( void )  //main function that....
             ledRed = 1;
         }
         
+        //Turns Fan ON/OFF
+        //If humidity goes above desired value, turns Fan ON
+        if(Humidity > MAX_HUMD){
+            fan = 1;
+        }
+        //Turns Fan goes below desired value, turns Fan OFF
+        else {
+            fan = 0;
+        }
+        
         //Displays Temperature and Humidity to LCD
-        //writeLCD(0b00011100, 0, 1, 1);
+        //writeLCD(0b00011100, 0, 1, 1);            //Scrolls display
         displayStats(Temperature, Humidity);
         //Increment Egg Roller Counter
         Egg_Roller_Counter++;
-        DELAY_MS(10000);
+        DELAY_MS(1000);
     }
 }
