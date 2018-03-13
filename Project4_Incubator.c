@@ -67,12 +67,12 @@ int Egg_Roller_Counter = 0;     //Time counter for Egg rotation (in seconds)
 
 // Configures Output compare module 1 for continuous Rotation Servo - Light
 void configOC1() {
-    T2CONbits.TON = 0;        //Turns timer 2 off.
-    CONFIG_OC1_TO_RP(RB0_RP); //Maps the OC1 output to the remappable pin, RB0.
-    OC1RS = 0;                //Clears the RS register
-    OC1R = 0;                 //Clears the R register
-    OC1CONbits.OCTSEL = 0;    //Sets the output compare module to use Timer 2 as the clock source.
-    OC1CONbits.OCM = 0b110;   //Sets it to operate in PWM mode with fault pin disabled.
+    T2CONbits.TON = 0;          //Turns timer 2 off.
+    CONFIG_OC1_TO_RP(RB0_RP);   //Maps the OC1 output to the remappable pin, RB0.
+    OC1RS = 0;                  //Clears the RS register
+    OC1R = 0;                   //Clears the R register
+    OC1CONbits.OCTSEL = 0;      //Sets the output compare module to use Timer 2 as the clock source.
+    OC1CONbits.OCM = 0b110;     //Sets it to operate in PWM mode with fault pin disabled.
 }
 
 // Configures Output compare module 2 for continuous Rotation Servo - Egg Roller
@@ -103,7 +103,7 @@ void _ISR _T2Interrupt(void) {
 //Reads temperature from sensor
 float getTemp(void) {
     write1I2C1(I2C_ADD, 0xE3);						//Tell sensor to take temperature reading
-    readNI2C1(I2C_ADD, temp, temp_size);				//Read binary temperature code into array temp
+    readNI2C1(I2C_ADD, temp, temp_size);			//Read binary temperature code into array temp
     
     uint16_t number = (uint16_t)temp[0] << 8 | temp[1];			//Shift items in array temp into an integer
     float temperature = ((((175.72*number)/65536.0)-46.85)*(9.0/5.0))+32.0;	//Convert temperature code to degrees Fahrenheit
@@ -113,7 +113,7 @@ float getTemp(void) {
 
 //Reads humidity from sensor
 float getHum(void) {
-    write1I2C1(I2C_ADD, 0xE5);					//Tell sensor to take humidity reading
+    write1I2C1(I2C_ADD, 0xE5);					    //Tell sensor to take humidity reading
     readNI2C1(I2C_ADD, hum, hum_size);				//Read binary humidity code into array hum
     
     uint16_t number = (uint16_t)temp[0] << 8 | temp[1];		//Shift items in array hum into an integer
